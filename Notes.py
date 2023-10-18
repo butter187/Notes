@@ -1,81 +1,130 @@
-import os
 import json
+import datetime
 
-class NotesApp:
-    def __init__(self):
-        self.notes = []
 
-    def load_notes(self):
-        if os.path.exists("notes.json"):
-            with open("notes.json", "r") as file:
-                self.notes = json.load(file)
+def load_notes():
+    try:
+        with open('notes.json', 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return []
 
-    def save_notes(self):
-        with open("notes.json", "w") as file:
-            json.dump(self.notes, file)
 
-    def create_note(self, title, content):
-        note = {"title": title, "content": content}
-        self.notes.append(note)
-        self.save_notes()
-        print(f"Заметка '{title}' успешно создана.")
+notes = load_notes()
 
-    def list_notes(self):
-        if not self.notes:
-            print("У вас нет заметок.")
-        else:
-            print("Список ваших заметок:")
-            for idx, note in enumerate(self.notes):
-                print(f"{idx + 1}. {note['title']}")
 
-    def edit_note(self, index, new_title, new_content):
-        if 0 <= index < len(self.notes):
-            self.notes[index]["title"] = new_title
-            self.notes[index]["content"] = new_content
-            self.save_notes()
-            print(f"Заметка успешно отредактирована.")
+def add_note():
+    title = input("Заголовок заметки: ")
+    text = input("Заметка: ")
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    note = {
+        'id': len(notes) + 1,
+        'title': title,
+        'text': text,
+        'timestamp': timestamp
+    }
+    notes.append(note)
+    save_notes(notes)
 
-    def delete_note(self, index):
-        if 0 <= index < len(self.notes):
-            deleted_note = self.notes.pop(index)
-            self.save_notes()
-            print(f"Заметка '{deleted_note['title']}' успешно удалена.")
 
-if __name__ == "__main__":
-    app = NotesApp()
-    app.load_notes()
+def save_notes(notes):
+    with open('notes.json', 'w') as file:
+        json.dump(notes, file, indent=4)
 
-    while True:
-        print("\nВыберите действие:")
-        print("1. Создать заметку")
-        print("2. Список заметок")
-        print("3. Редактировать заметку")
-        print("4. Удалить заметку")
-        print("5. Выйти")
 
-        choice = input("Введите номер действия: ")
+def delete_note():
+    note_id = int(input("Введите id заметки для удаления: "))
+    for note in notes:
+        if note['id'] == note_id:
+            notes.remove(note)
+            save_notes(notes)
+            print("Заметка удалена")
+            return
+    print("Заметка не найдена")
 
-        if choice == "1":
-            title = input("Введите заголовок заметки: ")
-            content = input("Введите текст заметки: ")
-            app.create_note(title, content)
-        elif choice == "2":
-            app.list_notes()
-        elif choice == "3":
-            index = int(input("Введите номер заметки для редактирования: ")) - 1
-            if 0 <= index < len(app.notes):
-                new_title = input("Введите новый заголовок: ")
-                new_content = input("Введите новый текст: ")
-                app.edit_note(index, new_title, new_content)
-            else:
-                print("Неверный номер заметки.")
-        elif choice == "4":
-            index = int(input("Введите номер заметки для удаления: ")) - 1
-            if 0 <= index < len(app.notes):
-                app.delete_note(index)
-            else:
-                print("Неверный номер заметки.")
-        elif choice == "5":
+
+def edit_note():
+    note_id = int(input("Введите id заметки для редактирования: "))
+    for note in notes:
+        if note['id'] == note_id:
+            new_title = input("Новый заголовок заметки: ")
+            new_text = input("Новый текст заметки: ")
+            note['title'] = new_title
+            note['text'] = new_text
+            note['timestamp'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            save_notes(notes)
+            print("Заметка отредактирована")
+            return
+    print("Заметка с id не найдена")
+
+
+def search_notes():
+    date_str = input("Введите дату для поиска заметки (YYYY-MM-DD): ")
+    try:
+        find_date = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        print("Некорректный формат даты")
+        return
+
+    find_notes = [note for note in notes if
+                      datetime.datetime.strptime(note['timestamp'], "%Y-%m-%d %H:%M:%S").date() == find_date]
+
+    if find_notes:
+        print("Заметки на указанную дату:")
+        for note in find_notes:
+            print(f"id: {note['id']}")
+            print(f"Заголовок: {note['title']}")
+            print(f"Тело: {note['text']}")
+            print(f"Дата/Время создания или последнего изменения: {note['timestamp']}")
+            print()
+    else:
+        print("Заметки на указанную дату не найдены")
+
+
+def print_notes():
+    for note in notes:
+        print(f"id: {note['id']}")
+        print(f"Заголовок: {note['title']}")
+        print(f"Тело: {note['text']}")
+        print("\n")
+
+
+def menu():
+    menu_points = ['Открыть',
+                   'Добавить заметку',
+                   'Сохранить заметку',
+                   'Изменить заметку',
+                   'Удалить заметку',
+                   'Найти заметку',
+                   'Напечатать',
+                   'Выход']
+    print('Главное меню:')
+    [print(f'\t{i}. {item}') for i, item in enumerate(menu_points, 1)]
+    choise = int(input('Выберите пункт меню: '))
+    return choise
+
+
+while True:
+    choice = menu()
+    match choice:
+        case 1:
+            load_notes()
+        case 2:
+            add_note()
+            print("Заметка добавлена")
+        case 3:
+            save_notes(notes)
+            print('Заметка сохранена')
+        case 4:
+            edit_note()
+            print("Заметка изменена")
+        case 5:
+            delete_note()
+            print("Заметка удалена")
+        case 6:
+            search_notes()
+        case 7:
+            print_notes()
+        case 8:
+            print('\nНу всё, пока!')
             break
-        else:
-            print("Неверный выбор. Попробуйте еще раз")
